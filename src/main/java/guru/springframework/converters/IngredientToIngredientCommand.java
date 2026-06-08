@@ -1,7 +1,9 @@
 package guru.springframework.converters;
 
 import guru.springframework.commands.IngredientCommand;
+import guru.springframework.commands.UnitOfMeasureCommand;
 import guru.springframework.domain.Ingredient;
+import guru.springframework.domain.UnitOfMeasure;
 import lombok.Synchronized;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.lang.Nullable;
@@ -26,13 +28,15 @@ public class IngredientToIngredientCommand implements Converter<Ingredient, Ingr
         if (ingredient == null) {
             return null;
         }
+        UnitOfMeasure uom = ingredient.getUom();
+        UnitOfMeasureCommand uomCommand = uomConverter.convert(uom);
 
         IngredientCommand ingredientCommand = new IngredientCommand();
         ingredientCommand.setId(ingredient.getId());
 
         ingredientCommand.setAmount(ingredient.getAmount());
         ingredientCommand.setDescription(ingredient.getDescription());
-        ingredientCommand.setUom(uomConverter.convert(ingredient.getUom()));
+        ingredientCommand.setUom(uomCommand);
         return ingredientCommand;
     }
 }
