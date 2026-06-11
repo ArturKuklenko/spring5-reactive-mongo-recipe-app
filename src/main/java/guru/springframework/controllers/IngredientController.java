@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import reactor.core.publisher.Mono;
+
+import javax.validation.Valid;
 
 /**
  * Created by jt on 6/28/17.
@@ -69,35 +72,38 @@ public class IngredientController {
     }
 
     @GetMapping("recipe/{recipeId}/ingredient/{id}/update")
-    public String updateRecipeIngredient(@PathVariable String recipeId,
-                                         @PathVariable String id,
-                                         Model model){
-        try{
+    public Mono<String> updateRecipeIngredient(@PathVariable String recipeId,
+                                               @PathVariable String id,
+                                               Model model){
+        /*try{
             model.addAttribute("ingredient", ingredientService.findByRecipeIdAndIngredientId(recipeId, id));
-
-            model.addAttribute("uomList", unitOfMeasureService.listAllUoms());
         } catch (Exception e) {
             e.printStackTrace();
-        }
-        return "recipe/ingredient/ingredientform";
+        }*/
+        model.addAttribute("uomList", unitOfMeasureService.listAllUoms());
+        return ingredientService.findByRecipeIdAndIngredientId(recipeId, id)
+                .map(ingredientCommand -> {
+                    model.addAttribute("ingredient", ingredientCommand);
+                    return "recipe/ingredient/ingredientform";
+                });
+        //return "recipe/ingredient/ingredientform";
     }
 
     @PostMapping("recipe/{recipeId}/ingredient")
-    public String saveOrUpdate(@ModelAttribute IngredientCommand command,
+    public Mono<String> saveOrUpdate(@PathVariable String recipeId,
+                                     @ModelAttribute IngredientCommand command,
                                BindingResult bindingResult){
-        IngredientCommand savedCommand = ingredientService.saveIngredientCommand(command).block();
         if(bindingResult.hasErrors()){
-            // Логуємо помилки для перевірки в консолі
             bindingResult.getAllErrors().forEach(objectError -> {
                 log.debug(objectError.toString());
             });
 
-            // Повертаємо користувача назад на форму створення/редагування
-            return "recipe/ingredient/ingredientform";
+            return Mono.just("recipe/ingredient/ingredientform");
         }
-        log.debug("saved ingredient id:" + savedCommand.getId());
-
-        return "redirect:/recipe/" + savedCommand.getRecipeId() + "/ingredient/" + savedCommand.getId() + "/show";
+        return ingredientService.saveIngredientCommand(command)
+                .map(savedCommand -> {
+                    return "redirect:/recipe/" + savedCommand.getRecipeId() + "/ingredient/" + savedCommand.getId() + "/show";
+                });
     }
 
     @GetMapping("recipe/{recipeId}/ingredient/{id}/delete")
