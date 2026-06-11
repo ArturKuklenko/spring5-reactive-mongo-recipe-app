@@ -9,6 +9,7 @@ import guru.springframework.services.UnitOfMeasureService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -69,17 +70,31 @@ public class IngredientController {
 
     @GetMapping("recipe/{recipeId}/ingredient/{id}/update")
     public String updateRecipeIngredient(@PathVariable String recipeId,
-                                         @PathVariable String id, Model model){
-        model.addAttribute("ingredient", ingredientService.findByRecipeIdAndIngredientId(recipeId, id).block());
+                                         @PathVariable String id,
+                                         Model model){
+        try{
+            model.addAttribute("ingredient", ingredientService.findByRecipeIdAndIngredientId(recipeId, id));
 
-        model.addAttribute("uomList", unitOfMeasureService.listAllUoms().collectList().block());
+            model.addAttribute("uomList", unitOfMeasureService.listAllUoms());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return "recipe/ingredient/ingredientform";
     }
 
     @PostMapping("recipe/{recipeId}/ingredient")
-    public String saveOrUpdate(@ModelAttribute IngredientCommand command){
+    public String saveOrUpdate(@ModelAttribute IngredientCommand command,
+                               BindingResult bindingResult){
         IngredientCommand savedCommand = ingredientService.saveIngredientCommand(command).block();
+        if(bindingResult.hasErrors()){
+            // Логуємо помилки для перевірки в консолі
+            bindingResult.getAllErrors().forEach(objectError -> {
+                log.debug(objectError.toString());
+            });
 
+            // Повертаємо користувача назад на форму створення/редагування
+            return "recipe/ingredient/ingredientform";
+        }
         log.debug("saved ingredient id:" + savedCommand.getId());
 
         return "redirect:/recipe/" + savedCommand.getRecipeId() + "/ingredient/" + savedCommand.getId() + "/show";
